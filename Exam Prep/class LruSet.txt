@@ -1,0 +1,256 @@
+// TODO: After you complete the Final Simulation, here are extended exercises.
+// You can ask AI to check your answers and give you further training.
+
+template <class T>
+class LruSet {
+    // OVERVIEW: a templated least recently used set
+
+    struct node_t {
+        node_t* next;
+        T value;
+    };
+    node_t *first;
+    node_t *last;
+
+public:
+    bool isEmpty() const; 
+    // EFFECTS: returns true if the set is empty and false otherwise.
+
+    void insert(const T &v); 
+    // MODIFIES: this; 
+    // EFFECTS: Queries v first by calling the query function. 
+    //          Inserts v into the set if and only if v is not in the set.
+
+    bool query(const T &v); 
+    // MODIFIES: this; 
+    // EFFECTS: Returns true if v is in the set and false otherwise. 
+    //          If query succeeds, also make v the most recently accessed element.
+
+    T remove(); 
+    // REQUIRES: set is not empty; 
+    // MODIFIES: this; 
+    // EFFECTS: Removes and returns the least recently accessed element from the set.
+
+    LruSet(); 
+    // Default constructor that constructs an empty set.
+
+    LruSet(const LruSet &other); 
+    // Copy constructor.
+
+    ...
+};
+
+// TODO: implement query
+
+
+
+
+template <class T>
+bool LruSet<T>::query(const T& v){
+	if(isEmpty()) return false;
+	node_t* dum=new node_t;
+	dum->next=first;
+	node_t* prev=dum;
+	node_t* cur=first;
+	bool flag=false;
+	while(cur){
+		if(cur->value==v){
+			flag=true;
+			break;
+		}
+		prev=prev->next;
+		cur=cur->next;
+	}
+	if(!flag){
+		delete dum;
+		return false;
+	}
+	if(cur==last){
+		delete dum;
+		return true;
+	}
+	prev->next=cur->next;
+	last->next=cur;
+	cur->next=nullptr;
+	last=cur;
+	delete dum;
+	return true;
+}
+
+template <class T>
+bool LruSet<T>::query(const T& v){
+	if(isEmpty()) return false;
+	if(first->value==v){
+		if(first==last) return true;
+		node_t* cur=first;
+		first=first->next;
+		last->next=cur;
+		cur->next=nullptr;
+		last=cur;
+		return true;
+	}
+	node_t* prev=first;
+	node_t* cur=first->next;
+	bool flag=false;
+	while(cur){
+		if(cur->value==v){
+			flag=true;
+			break;
+		}
+		prev=cur;
+		cur=cur->next;
+	}
+	if(!flag) return false;
+	if(cur==last) return true;
+	prev->next=cur->next;
+	last->next=cur;
+	cur->next=nullptr;
+	last=cur;
+	return true;
+}
+	
+
+// Further exercise
+
+template <class T>
+class LruSet {
+    // OVERVIEW: a templated least recently used set that stores pointers to T
+
+    struct node_t {
+        node_t* next;
+        T* value;  // pointer to the stored element
+    };
+    node_t *first;
+    node_t *last;
+
+public:
+    bool isEmpty() const; 
+    // EFFECTS: returns true if the set is empty and false otherwise.
+
+    void insert(T* p); 
+    // MODIFIES: this; 
+    // EFFECTS: Takes ownership of the pointer p. 
+    //          Queries *p first by calling the query function. 
+    //          Inserts p into the set if and only if *p is not in the set.
+    //          If *p is already in the set, deletes p.
+
+    bool query(const T &v); 
+    // MODIFIES: this; 
+    // EFFECTS: Returns true if v is in the set (using operator== for comparison) 
+    //          and false otherwise. If query succeeds, also make the element 
+    //          containing v the most recently accessed element.
+
+    T* remove(); 
+    // REQUIRES: set is not empty; 
+    // MODIFIES: this; 
+    // EFFECTS: Removes the least recently accessed element from the set,
+    //          returns the pointer to that element, and transfers ownership
+    //          of that pointer to the caller.
+
+    LruSet(); 
+    // Default constructor that constructs an empty set.
+
+    LruSet(const LruSet &other); 
+    // Copy constructor.
+
+    ...
+};	
+	
+
+// Questions
+	
+1. Consider the following client code:
+
+LruSet<Animal> zoo;
+zoo.insert(new Dog("Rex"));
+zoo.insert(new Cat("Whiskers"));
+zoo.query(Dog("Rex"));
+
+Assuming `Animal` is a base class with a virtual destructor and `Dog` and `Cat` are derived classes, what special considerations must be taken in the implementation of `LruSet` to ensure proper behavior and avoid memory leaks?
+
+2. Implement the copy constructor for `LruSet`. Assume that `T` has a clone method with signature `T* clone() const`. Your implementation should ensure deep copy and preserve the order of elements (from least to most recently accessed). You may define helper functions if necessary.
+
+3. Implement the `insert` method.
+
+4. Add a method `bool remove(const T& v)` that removes the element equal to `v` (if present) and returns true, otherwise returns false.
+
+// Answers
+
+1.
+在 LruSet 析构函数中删除 T* 时，必须通过虚析构函数调用正确的派生类析构函数。
+深拷贝多态对象需要克隆机制（如 clone() 虚函数）。
+比较对象时(query 中的 operator==)需考虑多态比较(可能需要虚函数或动态类型比较)
+
+2.
+LruSet(const LruSet& other) : first(nullptr), last(nullptr) {
+	node_t* cur=other.first;
+	while(cur){
+		node_t* _cur=new node_t;
+		_cur->value=cur->value->clone();
+		_cur->next=nullptr;
+		if(!last) first=last=_cur;
+		else{
+			last->next=_cur;
+			last=_cur;
+		}
+		cur=cur->next;
+	}
+}
+
+    void insert(T* p); 
+    // MODIFIES: this; 
+    // EFFECTS: Takes ownership of the pointer p. 
+    //          Queries *p first by calling the query function. 
+    //          Inserts p into the set if and only if *p is not in the set.
+    //          If *p is already in the set, deletes p.
+
+    bool query(const T &v); 
+    // MODIFIES: this; 
+    // EFFECTS: Returns true if v is in the set (using operator== for comparison) 
+    //          and false otherwise. If query succeeds, also make the element 
+    //          containing v the most recently accessed element.
+
+3. 
+void insert(T* p){
+	if(query(*p)){
+		delete p;
+		return;
+	}
+	node_t* n=new node_t;
+	n->value=p;
+	n->next=nullptr;
+	if(!last) first=last=n;
+	else{
+		last->next=n;
+		last=n;
+	}
+}
+
+4.
+template <class T>
+bool LruSet<T>::remove(const T& v){
+	if(isEmpty()) return false;
+	if(*(first->value)==v){
+		node_t* vic=first;
+		first=first->next;
+		if(vic==last) last=nullptr;
+		delete vic->value;
+		delete vic;
+		return true;
+	}
+	node_t* prev=first;
+	node_t* cur=first->next;
+	while(cur){
+		if(*(cur->value)==v){
+			prev->next=cur->next;
+			if(cur==last) last=prev;
+			delete cur->value;
+			delete cur;
+			return true;
+		}
+		prev=cur;
+		cur=cur->next;
+	}
+	return false;
+}
+	

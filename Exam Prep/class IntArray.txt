@@ -1,0 +1,67 @@
+// TODO: Recite every function and all the details. 
+// Make sure you can write all the following without any hint, as they are very basic.
+
+class IntArray{
+	int* data;
+	size_t size;
+	void copyArray(const IntArray& other);
+	void removeAll();
+public:
+	IntArray(size_t s=0);
+	IntArray(const IntArray& other);
+	IntArray& operator=(const IntArray& other);
+	~IntArray();
+	void set(size_t index, int value);
+	int get(size_t index) const;
+	size_t getSize() const {return size;}
+};
+
+IntArray::IntArray(size_t s) : size(s){
+	data=(s==0) ? nullptr : new int[size]();
+}
+void IntArray::copyArray(const IntArray& other){
+	size=other.size;
+	if(size==0){
+		data=nullptr;
+		return;
+	}
+	data=new int[size];
+	for(size_t i=0;i<size;i++) data[i]=other.data[i];
+}
+
+IntArray::IntArray(const IntArray& other) : data(nullptr), size(0) {
+	copyArray(other);
+}
+
+void IntArray::removeAll(){
+	delete[] data;
+	data=nullptr;
+	size=0;
+}
+
+IntArray& IntArray::operator=(const IntArray& other){
+	if(this==&other) return *this;
+	removeAll();
+	copyArray(other);
+	return *this;
+}
+
+IntArray::~IntArray(){
+	removeAll();
+}
+
+void IntArray::set(size_t index, int value){
+	if(index<0 || index>=size) return; // exception not required
+	data[index]=value;
+}
+
+int IntArray::get(size_t index) const{
+	if(index<0 || index>=size) return 0; // exception not required
+	return data[index];
+}
+
+
+
+
+
+	

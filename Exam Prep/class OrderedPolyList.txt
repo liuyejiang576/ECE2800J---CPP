@@ -1,0 +1,223 @@
+// OVERVIEW: This is an AI-generated exercise that prepares me for exam-like
+// 	class settings, especially writing complicated functions in a novel class.
+// You can use the following requirements as AI prompts.
+
+Novelty: The questions introduce features that are foundational but not repetitive of the original questions.
+Error-Prone Points: Embedded common beginner mistakes.
+Beginner-Friendly: Avoids advanced features like STL iterators, lambdas, or smart pointers — focusing on core C++ concepts and elem. data structure logic.
+
+// Base class for ordered polymorphic objects
+class Object {
+public:
+    // EFFECTS: Returns a pointer to a deep copy of the current object (clone idiom)
+    virtual Object* clone() = 0;
+    // EFFECTS: Returns true if this object is "less than" the other object (for ordering)
+    virtual bool isLessThan(const Object* other) const = 0;
+    // EFFECTS: Virtual destructor for proper subclass destruction
+    virtual ~Object() {}
+};
+
+// Templated OrderedPolymorphicList class
+template <class T>
+class OrderedPolyList {
+    // OVERVIEW: An ordered list storing pointers to polymorphic T objects (T inherits from Object)
+    // Maintains elements in ascending order (via Object::isLessThan)
+    // Enforces: existence, ownership, conservation, at-most-once invariants
+
+    struct node_t {
+        node_t* next;
+        T* value; // Pointer to a polymorphic T object (derived from Object)
+    };
+
+    node_t* head; // Pointer to the first node (smallest element in order)
+    int count;    // Number of elements in the list
+
+public:
+    // EFFECTS: Returns true if the list is empty, false otherwise
+    bool isEmpty() const;
+
+    // MODIFIES: this
+    // EFFECTS: Inserts a pointer to a T object into the list, maintaining ascending order.
+    //          Insertion succeeds ONLY if:
+    //          1. The pointer points to a dynamically allocated T object (existence invariant).
+    //          2. The object is not already in the list (at-most-once invariant).
+    //          After insertion, the container takes ownership of the object (ownership invariant).
+    void insertOrdered(T* obj);
+
+    // REQUIRES: The list is not empty
+    // MODIFIES: this
+    // EFFECTS: Removes and returns the pointer to the FIRST element (smallest in order).
+    //          Follows conservation invariant: caller must re-insert or delete the referent.
+    T* removeFront();
+
+    // EFFECTS: Returns true if the object (pointed to by obj) is in the list, false otherwise.
+    //          Uses Object::isLessThan to optimize search for ordered elements.
+    bool hasElement(T* obj) const;
+
+    // Default constructor: constructs an empty ordered list
+    OrderedPolyList();
+
+    // Copy constructor: performs a deep copy (uses clone() for polymorphic objects)
+    //                   and maintains the ascending order of elements.
+    OrderedPolyList(const OrderedPolyList& other);
+
+    // NOTE: Illegible solutions will be discarded upon grading. Think first before writing.
+};
+
+// TODO: Try to write every and each function.
+
+
+
+template <class T>
+void OrderedPolyList<T>::insertOrdered(T* obj){
+	if(hasElement(obj) return;
+	node_t* n=new node_t;
+	n->value=obj;
+	n->next=nullptr;
+	node_t* prev=nullptr;
+	node_t* cur=head;
+	while(cur && cur->value->isLessThan(obj)){
+		prev=cur;
+		cur=cur->next;
+	}
+	if(cur==head){
+		n->next=head;
+		head=n;
+	}
+	else{
+		n->next=cur;
+		prev->next=n;
+	}
+	count++;
+}
+
+template <class T>
+bool OrderedPolyList<T>::hasElement(T* obj) const{
+	if(isEmpty()) return false;
+	node_t* cur=head;
+	while(cur && cur->value->isLessThan(obj)) cur=cur->next;
+	return (cur && cur->value==obj);
+}
+
+template <class T>
+bool OrderedPolyList<T>::hasElement(T* obj) const{
+	if(isEmpty()) return false;
+	node_t* cur=head;
+	while(cur){
+		if(!cur->value->isLessThan(obj)){
+			return cur->value==obj;
+		}
+		cur=cur->next;
+	}
+	return false;
+}
+
+template <class T>
+OrderedPolyList<T>::OrderedPolyList(const OrderedPolyList& other)
+	: head(nullptr), count(0) {
+	node_t* cur=other.head;
+	node_t* last=nullptr;
+	while(cur){
+		Object* op=cur->value->clone();
+		T* obj=dynamic_cast<T*>(op);
+		if(!obj){
+			delete op;
+			cur=cur->next;
+			continue;
+		}
+		node_t* n=new node_t;
+		n->value=obj;
+		n->next=nullptr;
+		if(!head){
+			head=n;
+			last=n;
+		} else{
+			last->next=n;
+			last=n;
+		}
+		count++;
+		cur=cur->next;
+	}
+}
+
+template <class T>
+OrderedPolyList<T>::OrderedPolyList(const OrderedPolyList& other)
+	: head(nullptr), count(0) {
+	node_t* cur=other.head;
+	while(cur){
+		Object* op=cur->value->clone();
+		T* obj=dynamic_cast<T*>(op);
+		if(obj) insertOrdered(obj);
+		else delete op;
+		cur=cur->next;
+	}
+}
+			
+			
+Add-on Questions for Templated Ordered Polymorphic List
+
+To further comprehensively assess your understanding of templates, polymorphic containers, resource management, and linked list operations, we add four additional questions to the original exam.
+
+(8) (10%) Implement the removeSpecific Method
+The removeSpecific method removes a specific object (pointed to by obj) from the ordered list (not just the front element) and enforces the conservation invariant.
+Requirements:
+MODIFIES: this
+REQUIRES: The object exists in the list (caller is responsible for checking via hasElement() if needed)
+EFFECTS:
+Removes the node containing the pointer obj from the list, maintaining the integrity of the singly-linked list.
+Returns the pointer to the removed object (so the caller can follow the conservation invariant: re-insert or delete the referent).
+Updates the element count correctly.
+You may not define new helper functions, but may call class methods (e.g., isEmpty()).
+Write your implementation on the following 20 lines (one statement per line):
+
+
+(9) (7%) Implement the countIf Method (Function Pointer Integration)
+The countIf method counts the number of elements in the list that satisfy a user-defined condition (passed as a function pointer). This tests your ability to combine templates with function pointers (a foundational C++ feature for generic logic).
+Predefined Function Pointer Type:
+Add this line inside the OrderedPolyList class definition (you do not need to write it, just use it):
+// Function pointer type: takes a T* and returns true if the element meets the condition
+typedef bool (*ConditionFunc)(T*);
+Method Requirements:
+EFFECTS: Iterates through the ordered list and returns the number of elements for which the condition function (passed as an argument) returns true.
+OPTIMIZATION: Use the list’s ordered property to stop early if the condition can no longer be satisfied (e.g., if the condition is "value < 5" and the list is ascending, stop when elements are ≥5).
+You may not modify the list or define new helper functions.
+Write your implementation on the following 15 lines (one statement per line):
+
+
+(10) (8%) Implement the batchInsert Method (Bulk Ordered Insertion)
+The batchInsert method inserts an array of T pointers* into the ordered list in one call, maintaining ascending order and all resource invariants. This tests your ability to handle bulk operations and avoid redundant checks.
+Requirements:
+MODIFIES: this
+EFFECTS:
+Takes two arguments: a pointer to an array of T* (T** arr) and an integer size (number of elements in the array).
+For each pointer in the array:
+Insert it into the list only if it points to a dynamically allocated object (existence) and is not already in the list (at-most-once).
+Maintain the list’s ascending order (use insertOrdered() for individual insertion if needed).
+Updates the element count correctly for all successful insertions.
+Ignores null pointers in the array (do not insert them, do not throw errors).
+You may call insertOrdered() and hasElement() but not define new helper functions.
+First, write the declaration of the batchInsert method (place it in the OrderedPolyList class definition):
+// Write your declaration here:
+
+Then implement the method on the following 18 lines (one statement per line):
+
+(11) (12%) Design a Simple Iterator for OrderedPolyList
+Iterators are fundamental for traversing containers. For this problem, you will design a simple, non-polymorphic iterator for OrderedPolyList (called ListIterator) that supports basic forward traversal. This tests your ability to design nested structures and encapsulate list traversal logic.
+Requirements for ListIterator:
+Nested Structure: Define ListIterator as a public nested struct inside the OrderedPolyList class (so it has access to node_t).
+Core Methods/Data:
+A constructor that initializes the iterator to point to a specific node_t* (e.g., the head of the list).
+bool hasNext() const: Returns true if there is a next element to traverse.
+T* next(): Returns the pointer to the next element (T*) and advances the iterator to the next node. REQUIRES: hasNext() is true.
+Iterator Usage by Container: Add a public method to OrderedPolyList called getIterator() that returns a ListIterator initialized to the head of the list.
+No Advanced Features: Do not implement STL-compatible iterators (e.g., begin(), end(), operator overloading) — keep it simple for beginners.
+Tasks:
+(a) (4%) Write the declarations of the ListIterator struct and the getIterator() method (place them in the OrderedPolyList class definition).
+(b) (8%) Implement all methods of the ListIterator struct and the getIterator() method. You may write your implementation on the following 20 lines (one statement per line):
+
+
+	
+	
+
+
+	

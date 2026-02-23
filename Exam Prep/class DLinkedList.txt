@@ -1,0 +1,234 @@
+// TODO: Understand everything and practice writing all these functions on paper,
+// without any modification, just like a clean and neat high-school writing assignment.
+
+#include <stdexcept>  // 用于异常处理
+#include <cstddef>    // 用于size_t（可选，本次暂未使用）
+
+// 异常类：链表为空（复用之前的设计，保持一致性）
+class listIsEmpty : public std::runtime_error {
+public:
+    listIsEmpty() : std::runtime_error("Double linked list is empty") {}
+};
+
+// 双向链表类
+class DLinkedList {
+private:
+    // 双向链表节点结构体
+    struct Node {
+        int value;    // 节点值
+        Node* prev;   // 前驱指针
+        Node* next;   // 后继指针
+        Node(int v) : value(v), prev(nullptr), next(nullptr) {}
+    };
+
+    Node* head;  // 头指针
+    Node* tail;  // 尾指针
+
+    void copyList(const DLinkedList& other);
+    void removeAll();
+
+public:
+    DLinkedList();
+    DLinkedList(const DLinkedList& other);
+    DLinkedList& operator=(const DLinkedList& other);
+    ~DLinkedList();
+
+    bool isEmpty() const;  // 判断链表是否为空
+    void pushFront(int v); // 头插元素
+    void pushBack(int v);  // 尾插元素
+    int popFront();        // 头删元素（返回值，空则抛异常）
+    int popBack();         // 尾删元素（返回值，空则抛异常）
+};
+
+DLinkedList::DLinkedList() : head(nullptr), tail(nullptr){}
+void DLinkedList::removeAll(){
+	Node* cur=head;
+	while(cur){
+		Node* nxt=cur->next;
+		delete cur;
+		cur=nxt;
+	}
+	head=nullptr;
+	tail=nullptr;
+}
+
+void DLinkedList::copyList(const DLinkedList& other){
+	if(other.isEmpty()) return;
+	Node* cur=other.head;
+	while(cur){
+		pushBack(cur->value);
+		cur=cur->next;
+	}
+}
+
+DLinkedList::DLinkedList(const DLinkedList& other) : head(nullptr), tail(nullptr) {
+    copyList(other);
+}
+
+DLinkedList& DLinkedList::operator=(const DLinkedList& other) {
+    if (this != &other) { 
+        removeAll();     
+        copyList(other); 
+    }
+    return *this;
+}
+
+DLinkedList::~DLinkedList() {
+    removeAll();
+}
+
+bool DLinkedList::isEmpty() const {
+    return !head; 
+}
+
+void DLinkedList::pushFront(int v){
+	Node* h=new Node(v);
+	if(isEmpty()){
+		head=tail=h;
+		return;
+	}
+	h->next=head;
+	head->prev=h;
+	head=h;
+}
+
+void DLinkedList::pushBack(int v) {
+    Node* newNode = new Node(v); 
+    if (isEmpty()) {             
+        head = newNode;
+        tail = newNode;
+    } else {                     
+        newNode->prev = tail;
+        tail->next = newNode;
+        tail = newNode;          
+    }
+}
+
+int DLinkedList::popFront(){
+	if(isEmpty()) throw listIsEmpty();
+	Node* vic=head;
+	int res=vic->value;
+	if(head==tail) head=tail=nullptr;
+	else {
+		head=vic->next;
+		head->prev=nullptr;
+	}
+	delete vic;
+	return res;
+}
+	
+int DLinkedList::popBack() {
+    if (isEmpty()) {
+        throw listIsEmpty();
+    }
+    Node* victim = tail;    
+    int value = victim->value; 
+
+    if (head == tail) {     
+        head = nullptr;
+        tail = nullptr;
+    } else {               
+        tail = tail->prev; 
+        tail->next = nullptr;
+    }
+
+    delete victim;         
+    return value;           
+}	
+
+void insertAt(size_t index, int value){
+	size_t size=getSize();
+	if(index==0){
+		pushFront(value);
+		return;
+	}
+	if(index==size){
+		pushBack(value);
+		return;
+	}
+	if(index>=size) throw indexOutOfRange();
+	Node* cur=head;
+	for(int i=0;i<index-1;i++) cur=cur->next;
+	Node* n=new Node(value);
+	n->next=cur->next;
+	n->prev=cur;
+	cur->next->prev=n;
+	cur->next=n;
+}
+
+bool DLinkedList::removeFirst(int value){
+	if(isEmpty()) throw listIsEmpty();
+	Node* cur=head;
+	while(cur){
+		if(cur->value==value){
+			if(cur==head) popFront();
+			else if(cur==tail) popBack();
+			else{
+				cur->prev->next=cur->next;
+				cur->next->prev=cur->prev;
+				delete cur;
+			}
+			return true;
+		}
+		cur=cur->next;
+	}
+	return false;
+}
+	
+// 删除所有匹配值的节点（返回删除的个数）
+size_t DLinkedList::removeAllValue(int value) {
+    if (isEmpty()) return 0;
+    size_t count = 0;
+    Node* curr = head;
+    while (curr != nullptr) {
+        Node* nextNode = curr->next; // 先保存后继节点（防止删除后断链）
+        if (curr->value == value) {
+            if (curr == head) {
+                popFront();
+            } else if (curr == tail) {
+                popBack();
+            } else {
+                curr->prev->next = curr->next;
+                curr->next->prev = curr->prev;
+                delete curr;
+            }
+            count++;
+        }
+        curr = nextNode;
+    }
+    return count;
+}	
+
+int find(int value) const{
+	if(isEmpty()) return -1;
+	int i=0;
+	Node* cur=head;
+	while(cur){
+		if(cur->value==value) return i;
+		i++;
+		cur=cur->next;
+	}
+	return -1;
+}
+
+void reverse(){
+	if(isEmpty() || head==tail) return;
+	Node* cur=head;
+	Node* tmp=nullptr;
+	while(cur){
+		tmp=cur->next;
+		cur->next=cur->prev;
+		cur->prev=tmp;
+		cur=tmp;
+	}
+	tmp=head;
+	head=tail;
+	tail=tmp;
+}
+
+
+	
+	
+	
+
+	

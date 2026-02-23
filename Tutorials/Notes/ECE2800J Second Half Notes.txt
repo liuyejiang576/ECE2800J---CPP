@@ -1,0 +1,902 @@
+ECE2800J Second Half Notes
+
+liuyejiang576@sjtu.edu.cn
+
+This file is written in txt to help us get used to the pape-and-pen
+compiling environment in the exams.
+
+## ch13 abstract data types
+
+type: value+operation (encapsulation)
+abstract: hide details (information hiding)
+
+Passing by value modifies a copy
+use pointer/reference to modify caller
+
+void add_one(anInt i){
+	i.set_value(i.get_value()+1);
+}
+void add_one(anInt *ip){
+	ip->set_value(ip->get_value()+1);
+}
+
+
+mutable set of integers: can insert and remove
+int Intset::indexOf(int v){
+	for(int i=0;i<numElts;i++){
+		if(elts[i]==v) return i;
+	}
+	return MAXELTS;
+}
+
+bool IntSet::query(int v){
+	return (indexOf(v)!=MAXELTS);
+}
+
+void IntSet::insert(int v){
+	if(indexOf(v)==MAXELTS){
+		if(numElts==MAXELTS) throw MAXELTS;
+		elts[numElts++]=v;
+	}
+}
+
+void IntSet::remove(int v){
+	int victim=indexOf(v);
+	if(victim!=MAXELTS){
+		elts[victim]=elts[numElts-1];
+		numElts--;
+	}
+}
+
+a const object can only call its const member functions:
+const IntSet is;
+cout<<is.size(); // correct if size() is const
+is.insert(2); // wrong
+
+void A::g() const{f();}
+then f must be const
+void A::f() const;
+
+for a sorted IntSet
+
+void IntSet::remove(int v){
+	int victim=indexOf(v);
+	if(victim!=MAXELTS){
+		numElts--;
+		while(victim<numElts){
+			elts[victim]=elts[victim+1];
+			victim++;
+		}
+	}
+}
+
+void IntSet::insert(int v){
+	if(indexOf(v)==MAXELTS){
+		if(numElts==MAXELTS) throw MAXELTS;
+		int cand=numElts-1;
+		while(cand>=0 && elts[cand]>v){
+			elts[cand+1]=elts[cand];
+			cand--;
+		}
+		elts[cand+1]=v;
+		numElts++;
+	}
+}
+
+
+## ch14 subtypes, inheritance, virtual functions
+
+subtype S<:T : for any instance where an object of type T is expected,
+an object of type S can be supplied without changing the correctness of
+the original computation.
+
+example 1
+class bar : public foo
+bar b;
+foo *pf=&b; // correct
+
+example 2
+istream is a base class for input streams; ifstream and istringstream
+derive from it. iostream combines istream + ostream.
+we can use int where a double is expected, but this is 
+coercion-numeric conversion, not subtyping.
+
+example 3 B<:A
+int g(A& a){
+	int arg=2;
+	return a.f(arg);
+}
+
+void main(){
+	B b;
+	int c=g(b); // correct
+}
+
+example 4
+class IntSet {
+public:
+    void insert(int i) { cout << "IntSet\n"; }
+};
+
+class SortedIntSet : public IntSet {
+public:
+    void insert(int i) { cout << "SortedIntSet\n"; }
+};
+
+void insert100(IntSet& set) { set.insert(100); }
+
+int main() {
+    SortedIntSet set;
+    set.insert(10);
+    insert100(set);
+}
+
+SortedIntSet
+IntSet
+
+class IntSet {
+public:
+    virtual void insert(int i) { cout << "IntSet\n"; }
+};
+
+class SortedIntSet : public IntSet {
+public:
+    void insert(int i) override { cout << "SortedIntSet\n"; }
+};
+
+void insert100(IntSet& set) { set.insert(100); }
+
+int main() {
+    SortedIntSet set;
+    set.insert(10);
+    insert100(set);
+}
+
+SortedIntSet
+SortedIntSet
+
+three ways to create a subtype from a supertype:
+1. add operations
+2. strengthen the postconditions
+	effects clause; return type
+3. weaken the preconditions
+	requires clause; argument type;
+
+protected member function makes derived class accessible to it, 
+but changing the base class implementation will break, 
+making the derived class fragile.
+
+some subclasses are not subtypes and don't following the substitution rule,
+but C++ allows a subclass to be used wherever a superclass is expected,
+	1. write the virtual table, note that virtualness is derived
+	2. check the apparant type
+		if it's declared virtual or inherited virtual, use the actual type
+	3. else, use the apparent type
+
+without virtual, calling the derived ctor will call the base ctor first,
+derived dtor before base dtor. if with cout, cout both in order.
+
+if write a ctor without default ctor, declaring without params will error.
+if base dtor is non-virtual and you delete derived via base pointer, undefined behavior
+the ctor of a derived class can either use base default ctor or use the base copy ctor
+
+class Derived4 : public Base {
+public:
+    Derived4() = default;
+    Derived4(const Derived4& d4) { cout << "derived4::copy\n"; }
+};
+
+int main() {
+    cout << "Derived 4: \n";
+    Derived4 d4;
+    Derived4 d4c(d4);
+}
+
+Derived 4:
+base::default
+base::default
+derived4::copy
+
+
+## ch15 interface, invariant
+
+abstract base class/virtual base class, pure virtual functions 
+virtual void insert(int v)=0;
+
+cannot create instance, but can define &r or *p (to NULL)
+
+constructor in the derived class instead of the abstract base class
+
+// *.cpp (source file)
+static IntSetImpl impl;
+Intset *getIntSet(){
+	return &impl;
+}
+
+// *.h (header file)
+IntSet *getIntSet();
+
+checking for representation invariants
+bool strictedSorted(int a[], int size); // in private
+
+defensive programming
+bool repOK();
+assert(repOK());
+
+exercise
+struct Foo {
+    void f() { cout << "a"; };
+    virtual void g() = 0;
+    virtual void c() const = 0;
+};
+
+struct Bar : public Foo {
+    void f() { cout << "b"; };
+    void g() { cout << "c"; };
+    void c() const { cout << "d"; };
+    void h() { cout << "e"; };
+};
+
+struct Baz : public Bar {
+    void f() { cout << "f"; };
+    void g() { cout << "g"; };
+    void c() { cout << "h"; };
+    virtual void h() { cout << "i"; };
+};
+
+struct Qux : public Baz {
+    void f() { cout << "j"; };
+    void h() { cout << "k"; };
+};
+
+int main() {
+    Bar bar; bar.g();
+    Qux qux; qux.g();
+    Baz baz; baz.h();
+    Foo& f1 = qux; f1.f(); f1.g();
+    Bar& b1 = qux; b1.h();
+    Baz& b2 = qux; b2.h();
+    Bar* b3 = &qux; b3->h();
+    Baz* b4 = &qux; b4->h();
+    const Foo& f2 = *b3; f2.c();
+    Baz& b5 = *b4; b5.c();
+}
+
+1. don't mix Bar with Baz
+2. note that `void c() const` and `void c()` have different signature,
+	so only Bar::c() const implements Foo::c() const,
+	and Qux::c() inherits Baz::c()
+answer: `cgiagekekdh`
+
+
+## ch16 dynamic memory allocation
+
+int *ip=new int(5);
+IntSet *isp=new IntSet;
+
+int a=5; int *ip=&a; delete ip; // error, no `new` before `delete`
+
+the dynamic object lives until it is explicitly destroyed,
+pointer and object have different lifetime
+
+checking memory leak
+valgrind --leak-check=full ./program <args>
+
+memory
+	address MAX
+stack (grows down)
+the big void
+heap (grows up) (objects created by `new`)
+globals (fixed size)
+text (the program)
+	address 0
+
+int n=20;
+int *ia=new int[n];
+delete[] ia;
+
+int add(int a, int b=0, int c=1){}
+add(1,2); // a=1, b=2, c=1
+
+public:
+	Intset(int size=MAXELTS); // default argemunt in declaration only
+
+IntSet::IntSet(int size): // no "=MAXELTS" in implementation
+	elts(new int[size]), sizeElts(size), numElts(0) {}
+
+if a class has a dynamic object, it must hace a destructor to avoid memory leak
+IntSet::~IntSet(){
+	delete[] elts; // automatically called
+}
+
+correct version (neither memory leak, nor double deletion)
+class Base {
+protected:
+    int *p;
+public:
+    Base() : p(new int(10)) {}
+    virtual ~Base() {delete p;}
+};
+
+class Derived : public Base {
+    int *q;
+public:
+    Derived() : Base(), q(new int(20)) {}
+    virtual ~Derived() override {delete q;}
+};
+
+
+## ch17 deep copy
+
+shallow copy: when pass by value, the address is shared, once destroyed as one pointer
+	goes out of scope, the other pointer dangles
+void foo(IntSet x);
+void main(){
+	IntSet s;
+	s.insert(5);
+	foo(s); // making s dangle if copy is shallow
+	s.query(5); // undefined
+
+IntSet(const IntSet &is); // copy constructor
+&: avoid infinite recursion
+const: 1. avoid change 2. ensure const object can also serve as the source
+
+void IntSet::copyFrom(const IntSet &is){
+	if(is.sizeElts!=sizeElts){
+		delete[] elts;
+		sizeElts=is.sizeElts;
+		elts=new int[sizeElts];
+	}
+	for(int i=0;i<is.sizeElts;i++) elts[i]=is.elts[i];
+	numElts=is.numElts;
+}
+
+IntSet(const IntSet &is): // copy constructor
+	elts(nullptr), sizeElts(0), numElts(0){
+	copyFrom(is);
+}
+
+assignment statement returns a reference to its LHS object
+
+IntSet &operator= (const IntSet &is){ // assignment operator overloading
+	if(this!=&is) copyFrom(is);
+	return *this; // pointer dereferenced can be used as a reference
+}
+
+a=b; // considered as a.operator=(b)
+
+rule of the big three: if any dynamically allocated storage in a class:
+1. destructor 2. copy constructor 3. assignment operator
+
+
+## ch18 dynamic resizing
+void grow(){
+	// requires: sizeElts!=0, otherwise max(1,sizeElts*2)
+	int *tmp=new int[sizeElts*2];
+	for(int i=0;i<numElts;i++) tmp[i]=elts[i];
+	delete[] elts;
+	elts=tmp;
+	sizeElts*=2;
+}
+if sizeElts+1, O(N^2), now O(N)
+
+
+## ch19 linked list
+
+void IntList::insert(int v){ // insert at head
+	node *np=new node;
+	np->value=v;
+	np->next=first;
+	first=np;
+}
+
+int IntList::remove(){ // remove the head
+	if(isEmpty()){
+		listIsEmpty e;
+		throw e;
+	}
+	node* victim=first;
+	first=victim->next;
+	int result=victim->value;
+	delete victim;
+	return result;
+}
+
+IntList::IntList() : first(nullptr){}
+
+void IntList::removeAll(){
+	while(!isEmpty()) remove();
+}
+
+IntList::~IntList(){
+	removeAll();
+}
+
+void IntList::copyList(node *list){ // private
+	if(!list) return;
+	copyList(list->next);
+	insert(list->value);
+}
+
+void IntList::copyList(node* list){ // non-recursive version
+	removeAll();
+	if(!list) return;
+	node* cur=list;
+	node* last=nullptr;
+	while(cur){
+		node* _n=new node;
+		_n->value=list->value;
+		_n->next=nullptr;
+		if(!first) first=last=_n;
+		else{
+			last->next=_n;
+			last=_n;
+		}
+		cur=cur->next;
+	}
+}
+
+IntList::IntList(const IntList &l) : first(nullptr){
+	copyList(l.first);
+}
+
+IntList &IntList::operator= (const IntList &l){
+	if(this!=&l){
+		removeAll();
+		copyList(l.first);
+	}
+	return *this;
+}
+
+double-ended list
+	node *first;
+	node *last;
+void insertLast(int v){
+	node* np=new node;
+	np->value=v;
+	np->next=nullptr;
+	if(isEmpty()) first=last=np;
+	else{
+		last->next=np;
+		last=np;
+	}
+}
+
+doubly-linked list
+	node *next;
+	node *prev;
+	int value
+
+size=0: first=last=nullptr;
+size=1: first=last;
+
+
+## ch20 template, container
+
+intuition: type name left as a compile-time parameter
+
+class member definitions also in .h, not .cpp.
+
+Add <T> every time List is used as a class name, not a function name
+List<T>::List(const List<T> &l)
+List<T> &List<T>::operator= (const List<T> &l)
+
+specify T when creating the container object
+List<int> li;
+List<int> *lip=new List<int>;
+
+container of pointers
+struct node{
+	node *next;
+	BigThing *value;
+}
+
+subject to two classes of potential bugs:
+1. using an object after it has been deleted
+2. leaving an object orphaned by never deleting it
+
+**at-most-once invariant:** any object can be linked to at most one container
+at any time through pointer
+
+insert(list->value); // shallow copy
+void List::copyList(node *list){
+	if(!list) return;
+	copyList(list->next);
+	BT *o=new BT(*list->value); // Object will not work, see clone()
+	insert(o);
+}
+
+class Set {
+    T **elts; // An array of T *
+...
+Set<T>::Set(const Set<T> &s){
+    for(int i = 0; i < s.numElts; ++i){
+        insert(s[i]); // shallow copy
+    }
+}
+
+int *v1;
+s1.insert(v1); // existence
+for(int i = 0; i < 3; ++i){
+    s2.insert(&i); // existence
+}
+
+s1.insert(v2);
+*v2 = 3; // ownership
+
+**existence:** an object must be dynamically allocated before a pointer to it is inserted
+BigThing b; // wrong
+BigThing *pb=new BigThing; // correct
+l.insert(pb);
+
+**ownership:** once a pointer to an object is inserted, that object becomes the property
+of the container. it can only be modified through the methods of the container
+
+**conservation:** when a pointer is removed from a container, either the pointer must
+be inserted into some container, or its referent must be deleted after using
+
+**destruction:** when a container is destroyed, destroy the object
+	else, violate the conservation rule
+List::~List(){
+	while(!isEmpty()){
+		BT *op=remove();
+		delete op;
+	}
+}
+
+release resource allocated only in this class, do not release base class resources,
+otherwise when base dtor is then called, double deletion
+
+polymorphic container
+
+class Object{
+public:
+	virtual Object *clone()=0;
+	virtual ~Object() {} // must be virtual, or wrong subclass dtor
+}
+
+struct node{
+	node *next;
+	Object *value;
+};
+
+class List{
+...
+public:
+	void insert(Object *o);
+	Object *remove();
+...
+};
+
+class BigThing : public Object{
+...
+public:
+	Object *clone();
+	BigThing(const BigThing &b);
+...
+};
+
+Object *op;
+BigThing *bp;
+op=l.remove();
+bp=dynamic_cast<BigThing*>(op);
+assert(bp);
+
+dynamic_cast: change into ptr to either the derived class or NULL
+important: dynamic_cast can be used only when the base case has a virtual
+
+named constructor idiom
+Object *BigThing::clone(){
+	BigThing *bp=new BigThing(*this);
+	return bp; // substitution rule
+}
+
+void List::copyList(node *list){
+	if(!list) return;
+	copyList(list->next);
+	Object *o=list->value->clone();
+	insert(o);
+}
+
+## ch21 operator overloading
+
+A operator+ (const A &l, const A &r){
+	return A(l.val+r.val);
+} // non-member function
+
+A A::operator+ (const A &r){
+	return *this+r; // implicit this as the first operand
+} // member function, one fewer parameter
+
+Complex &Complex::operator+= (const Complex &o){
+	real+=o.real;
+	imag+=o.imag;
+	return *this;
+} // friend not needed for member function to have private access
+
+friend is NOT a member funtion
+class foo{
+ 	friend void baz();
+	friend class bar;
+	int f;
+};
+void baz(){...} // no foo::, not a member funtion
+class bar{...}; // not member
+
+const int &IntSet::operator[](int i) const{
+	if(i>=0 && i<numElts) return elts[i];
+	else throw -1;
+}
+
+int &IntSet::operator[](int i); // the same
+
+ostream &operator<< (ostream &os, const IntSet &is){
+	for(int i=0;i<is.size();i++) os<<is[i]<<" ";
+	return os;
+} // non-member cuz *this unsupported, return ostream& to support chain
+
+istream &operator>> (istream &is, foo &obj){
+...
+	return is;
+} // non-const to change obj
+
+
+## ch22 linear list and stack
+
+to realize a stack,
+1. Linked List: memory efficient but time inefficient for `size()` 
+2. Array: time efficient for `size()` but memory inefficient
+
+## ch23 queue
+
+queue using a circular array
+front = (front+1) % MAXSIZE;
+rear = (rear+1) % MAXSIZE;
+rear = (rear-1+MAXSIZE) % MAXSIZE;
+compared to linked list, size restricted, but support index access of elements
+
+
+## exercises
+What is the purpose of a virtual destructor in a base class?
+
+To ensure that the destructor of the derived class is called when
+deleting an object through a base class pointer.
+
+
+For the following code, which rule does it violate?
+
+void baz(Vec<int> &l) {
+    int *p = new int(7);
+    l.insert(p);
+    delete p;
+}
+
+答案: Ownership
+
+解析: 插入后，对象归容器所有，不能自行删除。删除操作应由容器在适当时候进行
+（如移除或析构）。这会导致容器内部指针悬垂。
+
+
+class A {
+public:
+    A() { std::cout << "A"; }
+    A(const A&) { std::cout << "copy"; }
+    ~A() { std::cout << "~A"; }
+};
+
+void f(A a) {
+    std::cout << "f";
+}
+
+int main() {
+    A a;
+    f(a);
+    return 0;
+}
+
+答案: Acopyf~A~A
+
+解析: 首先构造a，输出"A"；然后调用f(a)按值传递，调用拷贝构造函数输出"copy"；
+在f内部输出"f"；f返回时形参析构输出"~A"；主函数返回时a析构输出"~A"。
+
+
+Which line(s) will cause compilation error?
+
+cpp
+class Data {
+    int value;
+public:
+    Data(int v) : value(v) {}
+    int get() const { return value; }
+    void set(int v) { value = v; }
+};
+
+int main() {
+    const Data d(5);
+    int x = d.get();      // line 1
+    d.set(10);            // line 2
+    Data* p = &d;         // line 3
+    return 0;
+}
+Answer: Line 2 and line 3
+解析:
+
+Line 2: d是const对象，不能调用非const成员函数set()
+
+Line 3: 不能将const Data*赋值给Data*（缺少const限定）
+
+
+class Buffer {
+    char* data;
+    size_t size;
+public:
+    Buffer(size_t sz) : size(sz), data(new char[sz]) {}
+    ~Buffer() { delete[] data; }
+    // TODO: Add copy constructor and assignment operator
+};
+
+    Buffer(const Buffer& other) : size(other.size), data(new char[other.size]) {
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = other.data[i];
+        }
+    }
+	
+Buffer& operator=(const Buffer& other) {
+    if (this != &other) {
+        delete[] data;
+        size = other.size;
+        data = new char[size];
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = other.data[i];
+        }
+    }
+    return *this;
+}
+
+Write a clone for class Circle : public Shape
+
+Shape* clone() const override {
+    return new Circle(*this);
+}
+
+class Rational {
+    int num, den;
+public:
+    Rational(int n, int d) : num(n), den(d) {}
+    // Declare += operator
+    // Declare + operator as friend
+};
+
+Rational& operator+=(const Rational& rhs) {
+    // Assume common denominator for simplicity
+    num += rhs.num;
+    return *this;
+}
+
+friend Rational operator+(Rational lhs, const Rational& rhs) {
+    lhs += rhs;
+    return lhs;
+}
+
+
+What is the output?
+
+class Base {
+public:
+    virtual void print() { cout << "Base "; }
+};
+
+class Derived : public Base {
+public:
+    void print() override { cout << "Derived "; }
+};
+
+void func(Base b) {
+    b.print(); // object slicing, will print Base
+}
+
+/*
+void func(Base& b) { 
+    b.print(); // will print Derived
+}
+*/
+
+int main() {
+    Derived d;
+    func(d);
+    return 0;
+}
+Answer: Base
+解析: 函数func按值传递Base对象，导致对象切片（object slicing）。
+传递Derived对象时，只复制了Base部分，虚函数表指针指向Base的虚函数表。
+
+
+class IntSet {
+    int *elts;
+    int sizeElts;
+    int numElts;
+public:
+    IntSet(int size) : elts(new int[size]), sizeElts(size), numElts(0) {}
+    ~IntSet() { delete[] elts; }
+    void insert(int v);
+	// Implement the copy constructor
+};
+
+IntSet(const IntSet &other) : 
+    elts(new int[other.sizeElts]), 
+    sizeElts(other.sizeElts), 
+    numElts(other.numElts) {
+    for (int i = 0; i < numElts; i++)
+        elts[i] = other.elts[i];
+}
+
+
+find bugs and fix
+
+class Shape {
+public:
+    virtual double area() = 0;
+    virtual void display() const { cout << "Shape\n"; }
+    virtual ~Shape() {}
+};
+
+class Circle : public Shape {
+    double radius;
+public:
+    Circle(double r) : radius(r) {}
+    double area() override { return 3.14 * radius * radius; }
+    void display() override { cout << "Circle\n"; }
+};
+
+void test() {
+    Shape shapes[3];
+    shapes[0] = Circle(1.0);
+    shapes[1] = Circle(2.0);
+    for (int i = 0; i < 2; i++)
+        shapes[i].display();
+}
+
+Answer:
+The program has errors:
+Cannot instantiate abstract class: Shape is abstract (has pure virtual
+function area()), so Shape shapes[3]; is invalid.
+Object slicing: Even if Shape were not abstract, assigning a Circle to
+a Shape array element would slice the object, losing the derived part.
+Polymorphism doesn't work with slicing: After slicing, the objects
+become Shape type, not Circle.
+
+Fix:
+Use an array of pointers to Shape:
+
+Shape* shapes[3];
+shapes[0] = new Circle(1.0);
+shapes[1] = new Circle(2.0);
+for (int i = 0; i < 2; i++) {
+    shapes[i]->display();
+    delete shapes[i];  // Don't forget to delete
+}
+
+
+class Base { virtual void f() {} };
+class Derived : public Base {};
+
+int main() {
+    Base* b1 = new Base();
+    Base* b2 = new Derived();
+    Derived* d1 = dynamic_cast<Derived*>(b1); // nullptr
+    Derived* d2 = dynamic_cast<Derived*>(b2); // *d2
+    delete b1; delete b2;
+    return 0;
+}
+
+dynamic_cast 仅适用于多态类（基类有虚函数），
+现在b1 actual type为Base，无法转换
+
+
+
+
+
+
+
+
+	

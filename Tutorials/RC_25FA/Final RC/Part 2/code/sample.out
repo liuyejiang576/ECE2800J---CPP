@@ -1,0 +1,17 @@
+show box1:
+length address = 0x13a60b630
+width address  = 0x13a60b6a0
+height address = 0x13a60b6a0
+Length = 10
+Width  = 20
+Height = 30
+
+show box2:
+length address = 0x13a60b630
+width address  = 0x13a60b6a0
+height address = 0x13a60b6a0
+Length = 10
+Width  = 20
+Height = 30
+
+a.out(56362, 0x1dcfbe080) malloc: Double free of object 0x13a60b630
