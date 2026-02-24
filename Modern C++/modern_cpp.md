@@ -10,21 +10,19 @@ This tutorial assumes you have a solid foundation in traditional C++ (classes, i
 
 # Part I: C++11 Fundamentals
 
-## Chapter 1: Review
+## Chapter 0: Review
 
-(Cover Chapter 7 here, and relabel the original ch. 1-6 as 2-7)
+0.1 Lifetime Management: static, mutable, constexpr, volatile
 
-1.1 Lifetime Management: static, mutable, constexpr, volatile
+0.2 Class Behavior: final, default, delete, explicit
 
-1.2 Class Behavior: final, default, delete, explicit, noexcept
+0.3 Explicit Type Casting: static_cast, const_cast, reinterpret_cast, dynamic_cast
 
-1.3 Explicit Type Casting: static_cast, const_cast, reinterpret_cast, dynamic_cast
+0.4 Multiple Inheritance and The Diamond Problem
 
-1.4 Multiple Inheritance and The Diamond Problem
+0.5 Memory Layout
 
-1.5 Memory Layout
-
-1.6 Virtual Table
+0.6 Virtual Table
 
 ## Chapter 1: Move Semantics and Rvalue References
 
